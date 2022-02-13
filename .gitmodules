@@ -1,0 +1,3 @@
+[submodule "git_submodules/uosc"]
+	path = git_submodules/uosc
+	url = https://github.com/DrPleaseRespect/uosc.git
