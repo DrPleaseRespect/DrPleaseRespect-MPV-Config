@@ -1,6 +1,7 @@
 --[[
 
-uosc 2.13.1 - 2021-Jan-19 | https://github.com/darsain/uosc
+uosc 2.15.1 - 2022-Feb-12 | https://github.com/darsain/uosc
+Forked by DrPleaseRespect
 
 Minimalist cursor proximity based UI for MPV player.
 
@@ -59,7 +60,7 @@ volume_font_scale=1
 # playback speed widget: mouse drag or wheel to change, click to reset
 speed=no
 speed_size=46
-speed_size_fullscreen=68
+speed_size_fullscreen=60
 speed_persistency=
 speed_opacity=1
 speed_step=0.1
@@ -73,7 +74,18 @@ menu_hjkl_navigation=no
 menu_opacity=0.8
 menu_font_scale=1
 
-# top bar with window controls and media title shown only in no-border mode
+# menu button widget
+# can be: never, bottom-bar, center
+menu_button=never
+menu_button_size=26
+menu_button_size_fullscreen=30
+menu_button_persistency=
+menu_button_opacity=1
+menu_button_border=1
+
+# top bar with window controls and media title
+# can be: never, no-border, always
+top_bar=no-border
 top_bar_size=40
 top_bar_size_fullscreen=46
 top_bar_persistency=
@@ -236,7 +248,7 @@ local options = {
 
 	speed = false,
 	speed_size = 46,
-	speed_size_fullscreen = 68,
+	speed_size_fullscreen = 60,
 	speed_persistency = '',
 	speed_opacity = 1,
 	speed_step = 0.1,
@@ -249,6 +261,14 @@ local options = {
 	menu_opacity = 0.8,
 	menu_font_scale = 1,
 
+	menu_button = 'never',
+	menu_button_size = 26,
+	menu_button_size_fullscreen = 30,
+	menu_button_opacity = 1,
+	menu_button_persistency = '',
+	menu_button_border = 1,
+
+	top_bar = 'no-border',
 	top_bar_size = 40,
 	top_bar_size_fullscreen = 46,
 	top_bar_persistency = '',
@@ -276,11 +296,12 @@ local options = {
 	subtitle_types = 'aqt,gsub,jss,sub,ttxt,pjs,psb,rt,smi,slt,ssf,srt,ssa,ass,usf,idx,vt',
 	font_height_to_letter_width_ratio = 0.5,
 	chapter_ranges = '^op| op$|opening<968638:0.5>.*, ^ed| ed$|^end|ending$<968638:0.5>.*|{eof}, sponsor start<3535a5:.5>sponsor end, segment start<3535a5:0.5>segment end',
+	font = mp.get_property('options/osd-font')
 }
 opt.read_options(options, 'uosc')
 local config = {
 	render_delay = 0.03, -- sets max rendering frequency
-	font = mp.get_property('options/osd-font'),
+	font = options.font,
 	menu_parent_opacity = 0.4,
 	menu_min_width = 260
 }
@@ -1314,6 +1335,23 @@ end
 function icons.volume(pos_x, pos_y, size) return icons._volume(false, pos_x, pos_y, size) end
 function icons.volume_muted(pos_x, pos_y, size) return icons._volume(true, pos_x, pos_y, size) end
 
+function icons.menu_button(pos_x, pos_y, size)
+	local ass = assdraw.ass_new()
+	local scale = size / 100
+	function x(number) return pos_x + (number * scale) end
+	function y(number) return pos_y + (number * scale) end
+	local line_height = 14
+	local line_spacing = 18
+	for i = -1, 1 do
+	local offs = i * (line_height + line_spacing)
+		ass:move_to(x(-50), y(offs - line_height/2))
+		ass:line_to(x(50), y(offs - line_height/2))
+		ass:line_to(x(50), y(offs + line_height/2))
+		ass:line_to(x(-50), y(offs + line_height/2))
+	end
+	return ass.text
+end
+
 function icons.arrow_right(pos_x, pos_y, size)
 	local ass = assdraw.ass_new()
 	local scale = size / 200
@@ -1573,8 +1611,10 @@ function render_timeline(this)
 				ass:draw_stop()
 			end
 
-			for i, chapter in ipairs(state.chapters) do
-				draw_chapter(chapter.time)
+			if state.chapters ~= nil then
+				for i, chapter in ipairs(state.chapters) do
+					draw_chapter(chapter.time)
+				end
 			end
 
 			if state.ab_loop_a and state.ab_loop_a > 0 then
@@ -1962,6 +2002,26 @@ function render_speed(this)
 	return ass
 end
 
+function render_menu_button(this)
+	local opacity = this:get_effective_proximity()
+
+	if this.width == 0 or opacity == 0 then return end
+
+	if this.proximity_raw > 0 then opacity = opacity / 2 end
+
+	local ass = assdraw.ass_new()
+	-- Menu button
+	local burger = elements.menu_button
+	ass:new_event()
+	ass:append(icon(
+	'menu_button',
+		burger.ax + (burger.width / 2), burger.ay + (burger.height / 2), burger.width, -- x, y, size
+		0, 0, options.menu_button_border, -- shadow_x, shadow_y, shadow_size
+		'background', options.menu_button_opacity * opacity -- backdrop, opacity
+	))
+	return ass
+end
+
 function render_menu(this)
 	local ass = assdraw.ass_new()
 
@@ -2340,6 +2400,16 @@ elements:add('top_bar', Element.new({
 		if this.forced_proximity then return this.forced_proximity end
 		return (elements.volume_slider and elements.volume_slider.pressed) and 0 or this.proximity
 	end,
+	decide_enabled = function(this)
+		if options.top_bar == 'no-border' then
+			this.enabled = not state.border or state.fullormaxed
+		elseif options.top_bar == 'always' then
+			this.enabled = true
+		else
+			this.enabled = false
+		end
+		this.enabled = this.enabled and (options.top_bar_controls or options.top_bar_title)
+	end,
 	update_dimensions = function(this)
 		this.size = state.fullormaxed and options.top_bar_size_fullscreen or options.top_bar_size
 		this.icon_size = round(this.size / 8)
@@ -2352,8 +2422,12 @@ elements:add('top_bar', Element.new({
 		this.title_bx = this.bx - (options.top_bar_controls and (this.button_width * 3) or 0)
 		this.ax = options.top_bar_title and elements.window_border.size or this.title_bx
 	end,
-	on_prop_border = function(this, value)
-		this.enabled = not value and (options.top_bar_controls or options.top_bar_title)
+	on_prop_border = function(this)
+		this:decide_enabled()
+		this:update_dimensions()
+	end,
+	on_prop_fullormaxed = function(this)
+		this:decide_enabled()
 		this:update_dimensions()
 	end,
 	on_display_change = function(this) this:update_dimensions() end,
@@ -2478,6 +2552,44 @@ if itable_find({'left', 'right'}, options.volume) then
 			local current_rounded_volume = round(state.volume / options.volume_step) * options.volume_step
 			mp.commandv('set', 'volume', math.min(current_rounded_volume - options.volume_step, state.volume_max))
 		end,
+	}))
+end
+if itable_find({'center', 'bottom-bar'}, options.menu_button) then
+	elements:add('menu_button', Element.new({
+		width = 0, height = 0,
+		get_effective_proximity = function(this)
+			if menu:is_open() then return 0 end
+			if is_element_persistent('menu_button') then return 1 end
+			if elements.timeline.proximity_raw == 0 then return 0 end
+			if this.forced_proximity then return this.forced_proximity end
+			if options.menu_button == 'bottom-bar' then
+				local timeline_proximity = elements.timeline.forced_proximity or elements.timeline.proximity
+				return this.forced_proximity or math[cursor.hidden and 'min' or 'max'](this.proximity, timeline_proximity)
+			end
+			return this.proximity
+		end,
+		update_dimensions = function(this)
+			this.width = state.fullormaxed and options.menu_button_size_fullscreen or options.menu_button_size
+			this.height = this.width
+
+			if options.menu_button == 'bottom-bar' then
+				this.ax = 15
+				this.bx = this.ax + this.width
+				this.by = display.height - 10 - elements.window_border.size - elements.timeline.size_max - elements.timeline.top_border
+				this.ay = this.by - this.height
+			else
+				this.ax = round((display.width - this.width) / 2)
+				this.ay = round((display.height - this.height) / 2)
+				this.bx = this.ax + this.width
+				this.by = this.ay + this.height
+			end
+		end,
+		on_display_change = function(this) this:update_dimensions() end,
+		on_prop_border = function(this) this:update_dimensions() end,
+		on_mbtn_left_down = function(this)
+			if this.proximity_raw == 0 then menu_key_binding() end
+		end,
+		render = render_menu_button,
 	}))
 end
 if options.speed then
@@ -2713,7 +2825,7 @@ state.context_menu_items = (function()
 	local submenus_by_id = {}
 
 	for line in io.lines(input_conf_path) do
-		local key, command, title = string.match(line, ' *([%S]+) +(.*) #! *(.*)')
+		local key, command, title = string.match(line, '%s*([%S]+)%s+(.*)%s#!%s*(.*)')
 		if key then
 			local is_dummy = key:sub(1, 1) == '#'
 			local submenu_id = ''
@@ -2765,6 +2877,12 @@ end
 
 function update_cursor_position()
 	cursor.x, cursor.y = mp.get_mouse_pos()
+	-- mpv reports initial mouse position on linux as (0, 0), which always
+	-- displays the top bar, so we just swap this one coordinate to infinity
+	if cursor.x == 0 and cursor.y == 0 then
+		cursor.x = infinity
+		cursor.y = infinity
+	end
 	update_proximities()
 	request_render()
 end
@@ -3141,29 +3259,31 @@ end)
 mp.add_key_binding(nil, 'decide-pause-indicator', function()
 	elements.pause_indicator:decide()
 end)
-mp.add_key_binding(nil, 'menu', function()
-	if menu:is_open('menu') then
-		menu:close()
-	elseif state.context_menu_items then
-		menu:open(state.context_menu_items, function(command)
-			mp.command(command)
-		end, {type = 'menu'})
-	end
-end)
+function menu_key_binding()
+  if menu:is_open('menu') then
+    menu:close()
+  elseif state.context_menu_items then
+    menu:open(state.context_menu_items, function(command)
+      mp.command(command)
+    end, {type = 'menu'})
+  end
+end
+mp.add_key_binding(nil, 'menu', menu_key_binding)
 mp.add_key_binding(nil, 'load-subtitles', function()
 	if menu:is_open('load-subtitles') then menu:close() return end
 
 	local path = mp.get_property_native('path')
-	if path and not is_protocol(path) then
-		open_file_navigation_menu(
-			serialize_path(path).dirname,
-			function(path) mp.commandv('sub-add', path) end,
-			{
-				type = 'load-subtitles',
-				allowed_types = options.subtitle_types
-			}
-		)
+	if path and is_protocol(path) then
+		path='$HOME'
 	end
+	open_file_navigation_menu(
+		serialize_path(path).dirname,
+		function(path) mp.commandv('sub-add', path) end,
+		{
+			type = 'load-subtitles',
+			allowed_types = options.subtitle_types
+		}
+	)
 end)
 mp.add_key_binding(nil, 'subtitles', create_select_tracklist_type_menu_opener('Subtitles', 'sub', 'sid'))
 mp.add_key_binding(nil, 'audio', create_select_tracklist_type_menu_opener('Audio', 'audio', 'aid'))
