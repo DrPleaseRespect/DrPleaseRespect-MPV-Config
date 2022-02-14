@@ -1,5 +1,7 @@
+
+mpv_version = mp.get_property_osd("mpv-version", "MPV Player")
 osd = mp.create_osd_overlay("ass-events")
-osd_raw = "{\\an3}{\\fnUbuntu}{\\fs20}{\\c&Hffafe5&}MPV Player{\\c&H0000ff&} - {\\c&Haee5ff&}TESFIA Configuration"
+osd_raw = "{\\an3}{\\fnUbuntu}{\\fs20}{\\c&Hffafe5&}".. mpv_version .."{\\c&H0000ff&} - {\\c&Haee5ff&}TESFIA Configuration"
 osd.data = osd_raw
 
 osd:update()
