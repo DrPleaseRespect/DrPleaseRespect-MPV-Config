@@ -52,14 +52,11 @@ profile_applied = false
 
 function audio_only (name, value) 
 	local exception_list = {"Title", "Comment"}
-	local video_codec = mp.get_property("video-codec")
-	local file_path = mp.get_property('path')
 	local tracks = get_tracks()
 	if tracks["video_tracks"] <= 0 then
 		profile_applied = true
 		print("Applying audio-only profile")
 		mp.commandv("apply-profile", "audio-only")
-
 		local metadata = mp.get_property('filtered-metadata')
 		local title = mp.get_property_osd("media-title")
 		local line_string = ''
