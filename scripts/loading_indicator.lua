@@ -55,7 +55,7 @@ function remove_loading(event)
 	osd:remove()
 end
 
-mp.register_event("start-file", loading)
+mp.add_hook("on_load", 40 , loading)
 mp.register_event("playback-restart", remove_loading)
 mp.observe_property("paused-for-cache", "string", buffering_state_detection)
 mp.register_event("seek", seek_state_detection)
