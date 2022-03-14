@@ -1,6 +1,6 @@
 -- THIS LUA SCRIPT IS CREATED BY DRPLEASERESPECT --
 -- FOR DISPLAYING IF FILE/STREAM IS LOADING/BUFFERING --
--- Pretty Jank Code. I suck at doing OOP in Lua --
+-- Pretty Jank Code. Coding in Lua --
 
 mp = require 'mp'
 utils = require 'mp.utils'
@@ -10,6 +10,7 @@ osd = mp.create_osd_overlay("ass-events")
 loading_bool = false
 seek_state_timer = nil
 
+debug_flag = false
 
 
 
@@ -18,6 +19,9 @@ function loading()
 	osd.data = ass_raw
 	loading_bool = true
 	osd:update()
+	if debug_flag == true then
+		print("Loading OSD Loaded")
+	end
 end
 
 function buffering()
@@ -25,6 +29,9 @@ function buffering()
 	local ass_raw = "{\\an5}{\\fnBebasNeue}{\\fs80}{\\c&Hffafe5&}BUFFERING"
 	osd.data = ass_raw
 	osd:update()
+	if debug_flag == true then
+		print("Buffering OSD Loaded")
+	end
 end
 
 
@@ -42,17 +49,24 @@ end
 function seek_state_detection()
 	seek_state_timer = mp.add_timeout(0.5, function()
 		local demuxer_state = mp.get_property_native("demuxer-cache-state")
-		if demuxer_state['underrun'] == true then
-			buffering()
-		else
-			remove_loading()
+		if demuxer_state ~= nil then
+			if demuxer_state['underrun'] == true then
+				buffering()
+			else
+				remove_loading()
+			end
 		end
 	end)
 end
 
 function remove_loading(event)
-	loading_bool = false
-	osd:remove()
+	if loading_bool == true then
+		loading_bool = false
+		osd:remove()
+		if debug_flag == true then
+			print("OSD Removed")
+		end
+	end
 end
 
 mp.add_hook("on_load", 40 , loading)
