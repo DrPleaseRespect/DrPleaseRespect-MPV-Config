@@ -1,6 +1,6 @@
 --[[
 
-uosc 2.15.1 - 2022-Feb-12 | https://github.com/darsain/uosc
+uosc 2.16.0 - 2022-Mar-21 | https://github.com/darsain/uosc
 Forked by DrPleaseRespect
 
 Minimalist cursor proximity based UI for MPV player.
@@ -60,7 +60,7 @@ volume_font_scale=1
 # playback speed widget: mouse drag or wheel to change, click to reset
 speed=no
 speed_size=46
-speed_size_fullscreen=60
+speed_size_fullscreen=68
 speed_persistency=
 speed_opacity=1
 speed_step=0.1
@@ -180,6 +180,7 @@ Available keybindings (place into `input.conf`):
 Key  script-binding uosc/peek-timeline
 Key  script-binding uosc/toggle-progress
 Key  script-binding uosc/flash-timeline
+Key  script-binding uosc/flash-top-bar
 Key  script-binding uosc/flash-volume
 Key  script-binding uosc/flash-speed
 Key  script-binding uosc/flash-pause-indicator
@@ -2826,6 +2827,9 @@ state.context_menu_items = (function()
 
 	for line in io.lines(input_conf_path) do
 		local key, command, title = string.match(line, '%s*([%S]+)%s+(.*)%s#!%s*(.*)')
+		if not key then
+			key, command, title = string.match(line, '%s*([%S]+)%s+(.*)%s#menu:%s*(.*)')
+		end
 		if key then
 			local is_dummy = key:sub(1, 1) == '#'
 			local submenu_id = ''
@@ -3247,6 +3251,9 @@ end)
 mp.add_key_binding(nil, 'flash-timeline', function()
 	elements.timeline:flash()
 end)
+mp.add_key_binding(nil, 'flash-top-bar', function()
+	elements.top_bar:flash()
+end)
 mp.add_key_binding(nil, 'flash-volume', function()
 	if elements.volume then elements.volume:flash() end
 end)
@@ -3518,10 +3525,6 @@ mp.add_key_binding(nil, 'last-file', function() load_file_in_current_directory(-
 mp.add_key_binding(nil, 'delete-file-next', function()
 	local playlist_count = mp.get_property_native('playlist-count')
 
-	if playlist_count > 1 then
-		mp.commandv('playlist-remove', 'current')
-	end
-
 	local next_file = nil
 
 	local path = mp.get_property_native('path')
@@ -3530,17 +3533,23 @@ mp.add_key_binding(nil, 'delete-file-next', function()
 	if is_local_file then
 		path = normalize_path(path)
 
-		next_file = get_adjacent_file(path, 'forward', options.media_types)
-
 		if menu:is_open('open-file') then
 			elements.menu:delete_value(path)
 		end
 	end
 
-	if next_file then
-		mp.commandv('loadfile', next_file)
+	if playlist_count > 1 then
+		mp.commandv('playlist-remove', 'current')
 	else
-		mp.commandv('stop')
+		if is_local_file then
+			next_file = get_adjacent_file(path, 'forward', options.media_types)
+		end
+
+		if next_file then
+			mp.commandv('loadfile', next_file)
+		else
+			mp.commandv('stop')
+		end
 	end
 
 	if is_local_file then delete_file(path) end
