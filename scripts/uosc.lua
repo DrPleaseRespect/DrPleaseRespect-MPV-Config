@@ -1,7 +1,7 @@
 --[[
 
-uosc 2.16.0 - 2022-Mar-21 | https://github.com/darsain/uosc
-Forked by DrPleaseRespect
+uosc 2.17.0 - 2022-Apr-30 | https://github.com/darsain/uosc
+Forked By DrPleaseRespect
 
 Minimalist cursor proximity based UI for MPV player.
 
@@ -130,6 +130,8 @@ subtitle_types=aqt,gsub,jss,sub,ttxt,pjs,psb,rt,smi,slt,ssf,srt,ssa,ass,usf,idx,
 # if you are using some wide font and see a lot of right side clipping in menus,
 # try bumping this up
 font_height_to_letter_width_ratio=0.5
+# default open-file menu directory
+default_directory=~/
 
 # `chapter_ranges` lets you transform chapter indicators into range indicators.
 #
@@ -296,6 +298,7 @@ local options = {
 	media_types = '3gp,asf,avi,bmp,flac,flv,gif,h264,h265,jpeg,jpg,m4a,m4v,mid,midi,mkv,mov,mp3,mp4,mp4a,mp4v,mpeg,mpg,oga,ogg,ogm,ogv,opus,png,rmvb,svg,tif,tiff,wav,weba,webm,webp,wma,wmv',
 	subtitle_types = 'aqt,gsub,jss,sub,ttxt,pjs,psb,rt,smi,slt,ssf,srt,ssa,ass,usf,idx,vt',
 	font_height_to_letter_width_ratio = 0.5,
+	default_directory = '~/',
 	chapter_ranges = '^op| op$|opening<968638:0.5>.*, ^ed| ed$|^end|ending$<968638:0.5>.*|{eof}, sponsor start<3535a5:.5>sponsor end, segment start<3535a5:0.5>segment end',
 	font = mp.get_property('options/osd-font')
 }
@@ -3459,7 +3462,7 @@ mp.add_key_binding(nil, 'open-file', function()
 	local active_file
 
 	if path == nil or is_protocol(path) then
-		local path = serialize_path(mp.command_native({'expand-path', '~/'}))
+		local path = serialize_path(mp.command_native({'expand-path', options.default_directory}))
 		directory = path.path
 		active_file = nil
 	else
