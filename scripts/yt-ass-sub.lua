@@ -102,7 +102,6 @@ function subtitle_loader()
 
 	add_subtitles(path, "auto")
 
-	print("SUBTITLES LOADED!")
 end
 
 function clean_unregistered()
@@ -125,7 +124,6 @@ end
 
 function remove_webvtt_tracks()
 	local tracks = mp.get_property_native("track-list")
-	print("REMOVING WEBVTT TRACKS!")
 	for index, item in ipairs(tracks) do
 		if (item["codec"] == "webvtt" and item["type"] == "sub") then
 			print("REMOVED: ".. "ID: " .. item['id'] .. " LANG:" .. item["lang"])
