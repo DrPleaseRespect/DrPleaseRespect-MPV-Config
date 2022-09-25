@@ -1,3 +1,8 @@
+-- Copyright (c) 2022, DrPleaseRespect
+-- Licence: MIT License
+-- Creator: Julian Nayr
+-- Version 1.0
+
 -- THIS LUA SCRIPT IS CREATED BY DRPLEASERESPECT --
 -- FOR DISPLAYING AUDIO METADATA --
 
@@ -50,7 +55,7 @@ end
 
 profile_applied = false
 
-function audio_only (name, value) 
+function audio_only (name, value)
 	local exception_list = {"Title", "Comment"}
 	local tracks = get_tracks()
 	if tracks["video_tracks"] <= 0 then
@@ -71,7 +76,7 @@ function audio_only (name, value)
 				-- replace underscores with blank spaces
 				metadata_name = metadata_name:gsub("_", " ")
 				if not string_in_table(metadata_name, exception_list) then
-					osd_raw = osd_raw .. "\n" .. string.format("{\\an9}{\\fnUbuntu}{\\fs25}{\\c&Haee5ff&}%s: %s", metadata_name, value) 
+					osd_raw = osd_raw .. "\n" .. string.format("{\\an9}{\\fnUbuntu}{\\fs25}{\\c&Haee5ff&}%s: %s", metadata_name, value)
 				end
 			end
 		end

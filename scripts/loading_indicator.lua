@@ -1,4 +1,8 @@
--- THIS LUA SCRIPT IS CREATED BY DRPLEASERESPECT --
+-- Copyright (c) 2022, DrPleaseRespect
+-- Licence: MIT License
+-- Creator: Julian Nayr
+-- Version 1.0
+
 -- FOR DISPLAYING IF FILE/STREAM IS LOADING/BUFFERING --
 -- Pretty Jank Code. Coding in Lua --
 

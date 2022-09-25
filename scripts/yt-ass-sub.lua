@@ -1,5 +1,5 @@
 -- Copyright (c) 2022, DrPleaseRespect
--- Licence: MIT Licence
+-- Licence: MIT License
 -- Creator: Julian Nayr
 -- Version 1.0
 
@@ -70,7 +70,7 @@ function subtitle_loader()
 	yt_dl = yt_dlp_path
 	url = mp.get_property("stream-open-filename", nil)
 	title = mp.get_property("media-title", nil)
-	filepath = mp.get_property("path", nil) 
+	filepath = mp.get_property("path", nil)
 	print(yt_dl)
 	print(url)
 	print(mp.get_property("filename", nil))

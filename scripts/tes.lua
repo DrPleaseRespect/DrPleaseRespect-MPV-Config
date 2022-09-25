@@ -1,3 +1,7 @@
+-- Copyright (c) 2022, DrPleaseRespect
+-- Licence: MIT License
+-- Creator: Julian Nayr
+-- Version 1.0
 
 mpv_version = mp.get_property_osd("mpv-version", "MPV Player")
 osd = mp.create_osd_overlay("ass-events")
@@ -34,11 +38,11 @@ Fader = {
                     self.progress = (os.clock() - self.start_time) / self.duration
                 end
                 self.alpha = self.linear_interpolation(self.start_num, self.end_num, self.progress)
-                
+
                 if self.progress >= 1 then
                     self.alpha = self.end_num
                 end
-                local hex = string.format("%X", tostring(self.alpha)) 
+                local hex = string.format("%X", tostring(self.alpha))
                 local osd_opacity = "{\\alpha&H" .. hex .. "}"
                 osd.data = osd_opacity .. self.raw_string
                 osd:update()
