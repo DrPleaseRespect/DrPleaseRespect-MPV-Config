@@ -41,27 +41,31 @@ end
 
 function convert_srv3_to_ass(path)
 	local subs = utils.readdir(path, "files")
-	for _, item in ipairs(subs) do
-		item_path = utils.join_path(path, item)
-		hey2_args = {ytsubconverter_path, item_path, "--visual"}
-		hey = utils.subprocess({args=hey2_args})
-		print(utils.format_json(hey2_args))
-		print(item_path)
-		returncode = os.remove(item_path)
-		if returncode then
-			print("DELETED ".. item)
+	if subs ~= nil then
+		for _, item in ipairs(subs) do
+			item_path = utils.join_path(path, item)
+			hey2_args = {ytsubconverter_path, item_path, "--visual"}
+			hey = utils.subprocess({args=hey2_args})
+			print(utils.format_json(hey2_args))
+			print(item_path)
+			returncode = os.remove(item_path)
+			if returncode then
+				print("DELETED ".. item)
+			end
 		end
 	end
 end
 
 function add_subtitles(path, mode_of_operation)
 	local subs = utils.readdir(path, "files")
-	for _, item in ipairs(subs) do
-		item_path = utils.join_path(path, item)
-		if item:find(".ass") then
-			print("ADDING! ".. item)
-			slang = get_slang(item)
-			mp.commandv("sub-add" , item_path, mode_of_operation, slang, slang)
+	if subs ~= nil then
+		for _, item in ipairs(subs) do
+			item_path = utils.join_path(path, item)
+			if item:find(".ass") then
+				print("ADDING! ".. item)
+				slang = get_slang(item)
+				mp.commandv("sub-add" , item_path, mode_of_operation, slang, slang)
+			end
 		end
 	end
 end
@@ -71,9 +75,6 @@ function subtitle_loader()
 	url = mp.get_property("stream-open-filename", nil)
 	title = mp.get_property("media-title", nil)
 	filepath = mp.get_property("path", nil)
-	print(yt_dl)
-	print(url)
-	print(mp.get_property("filename", nil))
 
 	if check_if_url(url) then
 		if ( not(url:find("www.youtube.com") or url:find("youtu.be"))) then
@@ -93,18 +94,15 @@ function subtitle_loader()
 		clean_unregistered()
 	end
 
+	last_url = url
 
 	download_srv3_subtitles(path)
-
-	print(hey.status)
-	print(hey.stdout)
 
 	convert_srv3_to_ass(path)
 
 	add_subtitles(path, "auto")
 
 	print("SUBTITLES LOADED!")
-	last_url = url
 end
 
 function clean_unregistered()
