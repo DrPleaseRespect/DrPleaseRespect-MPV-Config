@@ -36,7 +36,7 @@ end
 function download_srv3_subtitles(path)
 	args = {yt_dl, "--no-config", "--no-playlist", "--write-sub", "--sub-langs", "all,-live_chat",
 		"--no-download", "--sub-format=srv3","--retries", "infinite","--cookies-from-browser", cookies_from, "--output", path .. "sub", url}
-	hey = utils.subprocess({args = args})
+	subproc = utils.subprocess({args = args})
 end
 
 function convert_srv3_to_ass(path)
@@ -44,9 +44,9 @@ function convert_srv3_to_ass(path)
 	if subs ~= nil then
 		for _, item in ipairs(subs) do
 			item_path = utils.join_path(path, item)
-			hey2_args = {ytsubconverter_path, item_path, "--visual"}
-			hey = utils.subprocess({args=hey2_args})
-			print(utils.format_json(hey2_args))
+			subproc_args = {ytsubconverter_path, item_path, "--visual"}
+			subproc = utils.subprocess({args=subproc_args})
+			print(utils.format_json(subproc_args))
 			print(item_path)
 			returncode = os.remove(item_path)
 			if returncode then
