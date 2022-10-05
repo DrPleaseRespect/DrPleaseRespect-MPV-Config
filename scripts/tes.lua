@@ -1,5 +1,5 @@
 -- Copyright (c) 2022, DrPleaseRespect
--- Licence: MIT License
+-- License: MIT License
 -- Creator: Julian Nayr
 -- Version 1.0
 
