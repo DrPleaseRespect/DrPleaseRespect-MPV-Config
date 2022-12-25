@@ -10,15 +10,19 @@ local mp = require 'mp'
 local utils = require 'mp.utils'
 local msg = require 'mp.msg'
 local pid = utils.getpid()
+
+
 local separator = "\\"
 local folder_path = os.getenv("TEMP")..separator.."mpv_subsconversion" .. separator .. pid
+local executable_prefix = ".exe"
+
 local path = folder_path .. separator
 
 
 local cookies_from = "firefox"
+local yt_dlp_path = mp.command_native({"expand-path", "~~/executables/yt-dlp" .. executable_prefix})
+local ytsubconverter_path = mp.command_native({"expand-path", "~~/executables/YTSubConverter" .. executable_prefix})
 
-local yt_dlp_path = mp.command_native({"expand-path", "~~/yt_dl/yt-dlp.exe"})
-local ytsubconverter_path = mp.command_native({"expand-path", "~~/yt_dl/YTSubConverter.exe"})
 local last_url = nil
 
 function check_if_url(url)
