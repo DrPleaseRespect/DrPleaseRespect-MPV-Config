@@ -3,7 +3,7 @@
 -- Creator: Julian Nayr
 -- Version 1.0
 
--- WINDOWS ONLY! --
+-- LINUX ONLY! --
 
 
 local mp = require 'mp'
@@ -12,16 +12,19 @@ local msg = require 'mp.msg'
 local pid = utils.getpid()
 
 
-local separator = "\\"
-local folder_path = os.getenv("TEMP")..separator.."mpv_subsconversion" .. separator .. pid
+local separator = "/"
+local temppath = mp.command_native({"expand-path", "~~/executables/YTSubConverter/Temp"})
+local folder_path = temppath..separator.."mpv_subsconversion" .. separator .. pid
 local executable_prefix = ".exe"
+local mono_path = "/usr/bin/mono"
+local bash = "/usr/bin/bash"
 
 local path = folder_path .. separator
 
 
 local cookies_from = "firefox"
-local yt_dlp_path = mp.command_native({"expand-path", "~~/executables/yt-dlp" .. executable_prefix})
-local ytsubconverter_path = mp.command_native({"expand-path", "~~/executables/YTSubConverter" .. executable_prefix})
+local yt_dlp_path = mp.command_native({"expand-path", "/usr/bin/yt-dlp"})
+local ytsubconverter_path = mp.command_native({"expand-path", "~~/executables/YTSubConverter/YTSubConverter" .. executable_prefix})
 
 local last_url = nil
 
@@ -34,7 +37,7 @@ function get_slang(item_name)
 end
 
 function delete_folder(folder_path)
-	utils.subprocess_detached({args = {"cmd", "/c", "rd", "/Q" , folder_path.."\\"}})
+	utils.subprocess_detached({args = {"/usr/bin/rmdir", folder_path}})
 end
 
 function download_srv3_subtitles(path)
@@ -48,7 +51,7 @@ function convert_srv3_to_ass(path)
 	if subs ~= nil then
 		for _, item in ipairs(subs) do
 			item_path = utils.join_path(path, item)
-			subproc_args = {ytsubconverter_path, item_path, "--visual"}
+			subproc_args = {mono_path, ytsubconverter_path, item_path, "--visual"}
 			subproc = utils.subprocess({args=subproc_args})
 			print(utils.format_json(subproc_args))
 			print(item_path)
