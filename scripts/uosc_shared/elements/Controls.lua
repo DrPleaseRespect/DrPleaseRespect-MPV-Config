@@ -65,7 +65,7 @@ function Controls:init()
 	for i, item in ipairs(items) do
 		local config = shorthands[item.config] and shorthands[item.config] or item.config
 		local config_tooltip = split(config, ' *%? *')
-		local tooltip = config_tooltip[2]
+		local tooltip = t(config_tooltip[2])
 		config = shorthands[config_tooltip[1]]
 			and split(shorthands[config_tooltip[1]], ' *%? *')[1] or config_tooltip[1]
 		local config_badge = split(config, ' *# *')
@@ -214,8 +214,7 @@ function Controls:register_badge_updater(badge, element)
 end
 
 function Controls:get_visibility()
-	local timeline_is_hovered = Elements.timeline.enabled and Elements.timeline.proximity_raw == 0
-	return (Elements.speed and Elements.speed.dragging) and 1 or timeline_is_hovered
+	return (Elements.speed and Elements.speed.dragging) and 1 or Elements.timeline:get_is_hovered()
 		and -1 or Element.get_visibility(self)
 end
 

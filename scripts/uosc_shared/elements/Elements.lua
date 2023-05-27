@@ -29,8 +29,6 @@ function Elements:remove(idOrElement)
 end
 
 function Elements:update_proximities()
-	local capture_mbtn_left = false
-	local capture_wheel = false
 	local menu_only = Elements.menu ~= nil
 	local mouse_leave_elements = {}
 	local mouse_enter_elements = {}
@@ -42,27 +40,13 @@ function Elements:update_proximities()
 
 			-- If menu is open, all other elements have to be disabled
 			if menu_only then
-				if element.ignores_menu then
-					capture_mbtn_left = true
-					capture_wheel = true
-					element:update_proximity()
-				else
-					element.proximity_raw = infinity
-					element.proximity = 0
-				end
+				if element.ignores_menu then element:update_proximity()
+				else element:reset_proximity() end
 			else
 				element:update_proximity()
 			end
 
-			-- Element has global forced key listeners
-			if element.on_global_mbtn_left_down then capture_mbtn_left = true end
-			if element.on_global_wheel_up or element.on_global_wheel_down then capture_wheel = true end
-
 			if element.proximity_raw == 0 then
-				-- Element has local forced key listeners
-				if element.on_mbtn_left_down then capture_mbtn_left = true end
-				if element.on_wheel_up or element.on_wheel_up then capture_wheel = true end
-
 				-- Mouse entered element area
 				if previous_proximity_raw ~= 0 then
 					mouse_enter_elements[#mouse_enter_elements + 1] = element
@@ -76,10 +60,6 @@ function Elements:update_proximities()
 		end
 	end
 
-	-- Enable key group captures requested by elements
-	mp[capture_mbtn_left and 'enable_key_bindings' or 'disable_key_bindings']('mbtn_left')
-	mp[capture_wheel and 'enable_key_bindings' or 'disable_key_bindings']('wheel')
-
 	-- Trigger `mouse_leave` and `mouse_enter` events
 	for _, element in ipairs(mouse_leave_elements) do element:trigger('mouse_leave') end
 	for _, element in ipairs(mouse_enter_elements) do element:trigger('mouse_enter') end
@@ -88,8 +68,15 @@ end
 -- Toggles passed elements' min visibilities between 0 and 1.
 ---@param ids string[] IDs of elements to peek.
 function Elements:toggle(ids)
-	local has_invisible = itable_find(ids, function(id) return Elements[id] and Elements[id].min_visibility ~= 1 end)
+	local has_invisible = itable_find(ids, function(id) return Elements[id] and Elements[id]:get_visibility() ~= 1 end)
 	self:set_min_visibility(has_invisible and 1 or 0, ids)
+	-- Reset proximities when toggling off. Has to happen after `set_min_visibility`,
+	-- as that is using proximity as a tween starting point.
+	if not has_invisible then
+		for _, id in ipairs(ids) do
+			if Elements[id] then Elements[id]:reset_proximity() end
+		end
+	end
 end
 
 -- Set (animate) elements' min visibilities to passed value.
@@ -98,7 +85,10 @@ end
 function Elements:set_min_visibility(visibility, ids)
 	for _, id in ipairs(ids) do
 		local element = Elements[id]
-		if element then element:tween_property('min_visibility', element.min_visibility, visibility) end
+		if element then
+			local from = math.max(0, element:get_visibility())
+			element:tween_property('min_visibility', from, visibility)
+		end
 	end
 end
 
@@ -118,37 +108,18 @@ end
 -- Disabled elements don't receive these events.
 ---@param name string Event name.
 function Elements:proximity_trigger(name, ...)
-	for _, element in self:ipairs() do
+	for i = #self.itable, 1, -1 do
+		local element = self.itable[i]
 		if element.enabled then
-			if element.proximity_raw == 0 then element:trigger(name, ...) end
-			element:trigger('global_' .. name, ...)
+			if element.proximity_raw == 0 then
+				if element:trigger(name, ...) == 'stop_propagation' then break end
+			end
+			if element:trigger('global_' .. name, ...) == 'stop_propagation' then break end
 		end
 	end
 end
 
 function Elements:has(id) return self[id] ~= nil end
 function Elements:ipairs() return ipairs(self.itable) end
-
----@param name string Event name.
-function Elements:create_proximity_dispatcher(name)
-	return function(...) self:proximity_trigger(name, ...) end
-end
-
-mp.set_key_bindings({
-	{
-		'mbtn_left',
-		Elements:create_proximity_dispatcher('mbtn_left_up'),
-		function(...)
-			update_mouse_pos(nil, mp.get_property_native('mouse-pos'), true)
-			Elements:proximity_trigger('mbtn_left_down', ...)
-		end,
-	},
-	{'mbtn_left_dbl', 'ignore'},
-}, 'mbtn_left', 'force')
-
-mp.set_key_bindings({
-	{'wheel_up', Elements:create_proximity_dispatcher('wheel_up')},
-	{'wheel_down', Elements:create_proximity_dispatcher('wheel_down')},
-}, 'wheel', 'force')
 
 return Elements

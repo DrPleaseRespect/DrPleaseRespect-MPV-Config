@@ -5,7 +5,7 @@ sort_filenames = (function()
 	local symbol_order
 	local default_order
 
-	if state.os == 'windows' then
+	if state.platform == 'windows' then
 		symbol_order = {
 			['!'] = 1, ['#'] = 2, ['$'] = 3, ['%'] = 4, ['&'] = 5, ['('] = 6, [')'] = 6, [','] = 7,
 			['.'] = 8, ["'"] = 9, ['-'] = 10, [';'] = 11, ['@'] = 12, ['['] = 13, [']'] = 13, ['^'] = 14,
@@ -23,9 +23,9 @@ sort_filenames = (function()
 
 	-- Alphanumeric sorting for humans in Lua
 	-- http://notebook.kulchenko.com/algorithms/alphanumeric-natural-sorting-for-humans-in-lua
-	local function pad_number(d)
-		local dec, n = d:match('(%.?)0*(.+)')
-		return #dec > 0 and ('%.12f'):format(d) or ('%03d%s'):format(#n, n)
+	local function pad_number(n, d)
+		return #d > 0 and ("%03d%s%.12f"):format(#n, n, tonumber(d) / (10 ^ #d))
+			or ("%03d%s"):format(#n, n)
 	end
 
 	--- In place sorting of filenames
@@ -35,7 +35,7 @@ sort_filenames = (function()
 		for i, filename in ipairs(filenames) do
 			local first_char = filename:sub(1, 1)
 			local order = symbol_order[first_char] or default_order
-			local formatted = filename:lower():gsub('%.?%d+', pad_number)
+			local formatted = filename:lower():gsub('0*(%d+)%.?(%d*)', pad_number)
 			tuples[i] = {order, formatted, filename}
 		end
 		table.sort(tuples, function(a, b)
@@ -93,6 +93,85 @@ function get_point_to_rectangle_proximity(point, rect)
 	return math.sqrt(dx * dx + dy * dy)
 end
 
+---@param point_a {x: number; y: number}
+---@param point_b {x: number; y: number}
+function get_point_to_point_proximity(point_a, point_b)
+	local dx, dy = point_a.x - point_b.x, point_a.y - point_b.y
+	return math.sqrt(dx * dx + dy * dy)
+end
+
+---@param lax number
+---@param lay number
+---@param lbx number
+---@param lby number
+---@param max number
+---@param may number
+---@param mbx number
+---@param mby number
+function get_line_to_line_intersection(lax, lay, lbx, lby, max, may, mbx, mby)
+	-- Calculate the direction of the lines
+	local uA = ((mbx-max)*(lay-may) - (mby-may)*(lax-max)) / ((mby-may)*(lbx-lax) - (mbx-max)*(lby-lay))
+	local uB = ((lbx-lax)*(lay-may) - (lby-lay)*(lax-max)) / ((mby-may)*(lbx-lax) - (mbx-max)*(lby-lay))
+
+	-- If uA and uB are between 0-1, lines are colliding
+	if uA >= 0 and uA <= 1 and uB >= 0 and uB <= 1 then
+		return lax + (uA * (lbx-lax)), lay + (uA * (lby-lay))
+	end
+
+	return nil, nil
+end
+
+-- Returns distance from the start of a finite ray assumed to be at (rax, ray)
+-- coordinates to a line.
+---@param rax number
+---@param ray number
+---@param rbx number
+---@param rby number
+---@param lax number
+---@param lay number
+---@param lbx number
+---@param lby number
+function get_ray_to_line_distance(rax, ray, rbx, rby, lax, lay, lbx, lby)
+	local x, y = get_line_to_line_intersection(rax, ray, rbx, rby, lax, lay, lbx, lby)
+	if x then
+		return math.sqrt((rax - x) ^ 2 + (ray - y) ^ 2)
+	end
+	return nil
+end
+
+-- Returns distance from the start of a finite ray assumed to be at (ax, ay)
+-- coordinates to a rectangle. Returns `0` if ray originates inside rectangle.
+---@param  ax number
+---@param  ay number
+---@param  bx number
+---@param  by number
+---@param  rect {ax: number; ay: number; bx: number; by: number}
+---@return number|nil
+function get_ray_to_rectangle_distance(ax, ay, bx, by, rect)
+	-- Is inside
+	if ax >= rect.ax and ax <= rect.bx and ay >= rect.ay and ay <= rect.by then
+		return 0
+	end
+
+	local closest = nil
+
+	local function updateDistance(distance)
+		if distance and (not closest or distance < closest) then closest = distance end
+	end
+
+	updateDistance(get_ray_to_line_distance(ax, ay, bx, by, rect.ax, rect.ay, rect.bx, rect.ay))
+	updateDistance(get_ray_to_line_distance(ax, ay, bx, by, rect.bx, rect.ay, rect.bx, rect.by))
+	updateDistance(get_ray_to_line_distance(ax, ay, bx, by, rect.ax, rect.by, rect.bx, rect.by))
+	updateDistance(get_ray_to_line_distance(ax, ay, bx, by, rect.ax, rect.ay, rect.ax, rect.by))
+
+	return closest
+end
+
+-- Call function with args if it exists
+function call_maybe(fn, ...)
+	if type(fn) == 'function' then fn(...) end
+end
+
 -- Extracts the properties used by property expansion of that string.
 ---@param str string
 ---@param res { [string] : boolean } | nil
@@ -130,12 +209,21 @@ function ass_escape(str)
 end
 
 ---@param seconds number
+---@param max_seconds number|nil Trims unnecessary `00:` if time is not expected to reach it.
 ---@return string
-function format_time(seconds)
+function format_time(seconds, max_seconds)
 	local human = mp.format_time(seconds)
 	if options.time_precision > 0 then
 		local formatted = string.format('%.' .. options.time_precision .. 'f', math.abs(seconds) % 1)
 		human = human .. '.' .. string.sub(formatted, 3)
+	end
+	if max_seconds then
+		local trim_length = (max_seconds < 60 and 7 or (max_seconds < 3600 and 4 or 0))
+		if trim_length > 0 then
+			local has_minus = seconds < 0
+			human = string.sub(human, trim_length + (has_minus and 1 or 0))
+			if has_minus then human = '-' .. human end
+		end
 	end
 	return human
 end
@@ -146,7 +234,7 @@ function opacity_to_alpha(opacity)
 end
 
 path_separator = (function()
-	local os_separator = state.os == 'windows' and '\\' or '/'
+	local os_separator = state.platform == 'windows' and '\\' or '/'
 
 	-- Get appropriate path separator for the given path.
 	---@param path string
@@ -172,7 +260,7 @@ end
 ---@return boolean
 function is_absolute(path)
 	if path:sub(1, 2) == '\\\\' then return true
-	elseif state.os == 'windows' then return path:find('^%a+:') ~= nil
+	elseif state.platform == 'windows' then return path:find('^%a+:') ~= nil
 	else return path:sub(1, 1) == '/' end
 end
 
@@ -190,7 +278,7 @@ end
 function trim_trailing_separator(path)
 	local separator = path_separator(path)
 	path = trim_end(path, separator)
-	if state.os == 'windows' then
+	if state.platform == 'windows' then
 		-- Drive letters on windows need trailing backslash
 		if path:sub(#path) == ':' then path = path .. '\\' end
 	else
@@ -217,12 +305,12 @@ function normalize_path(path)
 
 	path = ensure_absolute(path)
 	local is_unc = path:sub(1, 2) == '\\\\'
-	if state.os == 'windows' or is_unc then path = path:gsub('/', '\\') end
+	if state.platform == 'windows' or is_unc then path = path:gsub('/', '\\') end
 	path = trim_trailing_separator(path)
 
 	--Deduplication of path separators
 	if is_unc then path = path:gsub('(.\\)\\+', '%1')
-	elseif state.os == 'windows' then path = path:gsub('\\\\+', '\\')
+	elseif state.platform == 'windows' then path = path:gsub('\\\\+', '\\')
 	else path = path:gsub('//+', '/') end
 
 	return path
@@ -303,21 +391,25 @@ function read_directory(path, allowed_types)
 	return files, directories
 end
 
--- Returns full absolute paths of files in the same directory as file_path,
+-- Returns full absolute paths of files in the same directory as `file_path`,
 -- and index of the current file in the table.
+-- Returned table will always contain `file_path`, regardless of `allowed_types`.
 ---@param file_path string
----@param allowed_types? string[]
+---@param allowed_types? string[] Filter adjacent file types. Does NOT filter out the `file_path`.
 function get_adjacent_files(file_path, allowed_types)
-	local current_file = serialize_path(file_path)
-	if not current_file then return end
-	local files = read_directory(current_file.dirname, allowed_types)
+	local current_meta = serialize_path(file_path)
+	if not current_meta then return end
+	local files = read_directory(current_meta.dirname)
 	if not files then return end
 	sort_filenames(files)
 	local current_file_index
 	local paths = {}
-	for index, file in ipairs(files) do
-		paths[#paths + 1] = join_path(current_file.dirname, file)
-		if current_file.basename == file then current_file_index = index end
+	for _, file in ipairs(files) do
+		local is_current_file = current_meta.basename == file
+		if is_current_file or not allowed_types or has_any_extension(file, allowed_types) then
+			paths[#paths + 1] = join_path(current_meta.dirname, file)
+			if is_current_file then current_file_index = #paths end
+		end
 	end
 	if not current_file_index then return end
 	return paths, current_file_index
@@ -352,7 +444,7 @@ end
 ---@param delta number
 function navigate_directory(delta)
 	if not state.path or is_protocol(state.path) then return false end
-	local paths, current_index = get_adjacent_files(state.path, config.media_types)
+	local paths, current_index = get_adjacent_files(state.path, config.types.autoload)
 	if paths and current_index then
 		local _, path = decide_navigation_in_list(paths, current_index, delta)
 		if path then mp.commandv('loadfile', path) return true end
@@ -380,7 +472,29 @@ end
 -- `status:number(<0=error), stdout, stderr, error_string, killed_by_us:boolean`
 ---@param path string
 function delete_file(path)
-	local args = state.os == 'windows' and {'cmd', '/C', 'del', path} or {'rm', path}
+	if state.platform == 'windows' then
+		if options.use_trash then
+			local ps_code = [[
+				Add-Type -AssemblyName Microsoft.VisualBasic
+				[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile('__path__', 'OnlyErrorDialogs', 'SendToRecycleBin')
+			]]
+
+			local escaped_path = string.gsub(path, "'", "''")
+            escaped_path = string.gsub(escaped_path, "’", "’’")
+            escaped_path = string.gsub(escaped_path, "%%", "%%%%")
+            ps_code = string.gsub(ps_code, "__path__", escaped_path)
+		    args = { 'powershell', '-NoProfile', '-Command', ps_code }
+		else
+			args = { 'cmd', '/C', 'del', path }
+		end
+	else
+		if options.use_trash then
+			--On Linux and Macos the app trash-cli/trash must be installed first.
+		    args = { 'trash', path }
+		else
+		    args = { 'rm', path }
+		end
+	end
 	return mp.command_native({
 		name = 'subprocess',
 		args = args,
@@ -393,10 +507,23 @@ end
 function serialize_chapter_ranges(normalized_chapters)
 	local ranges = {}
 	local simple_ranges = {
-		{name = 'openings', patterns = {'^op ', '^op$', ' op$', 'opening$'}, requires_next_chapter = true},
-		{name = 'intros', patterns = {'^intro$'}, requires_next_chapter = true},
-		{name = 'endings', patterns = {'^ed ', '^ed$', ' ed$', 'ending$', 'closing$'}},
-		{name = 'outros', patterns = {'^outro$'}},
+		{name = 'openings', patterns = {
+				'^op ', '^op$', ' op$',
+				'^opening$', ' opening$'
+			}, requires_next_chapter = true},
+		{name = 'intros', patterns = {
+				'^intro$', ' intro$',
+				'^avant$', '^prologue$'
+			}, requires_next_chapter = true},
+		{name = 'endings', patterns = {
+				'^ed ', '^ed$', ' ed$',
+				'^ending ', '^ending$', ' ending$',
+			}},
+		{name = 'outros', patterns = {
+				'^outro$', ' outro$',
+				'^closing$', '^closing ',
+				'^preview$', '^pv$',
+			}},
 	}
 	local sponsor_ranges = {}
 
@@ -420,7 +547,7 @@ function serialize_chapter_ranges(normalized_chapters)
 					if next_chapter or not meta.requires_next_chapter then
 						ranges[#ranges + 1] = table_assign({
 							start = chapter.time,
-							['end'] = next_chapter and next_chapter.time or infinity,
+							['end'] = next_chapter and next_chapter.time or INFINITY,
 						}, config.chapter_ranges[meta.name])
 					end
 				end
@@ -449,7 +576,7 @@ function serialize_chapter_ranges(normalized_chapters)
 				local next_chapter = chapters[i + 1]
 				ranges[#ranges + 1] = table_assign({
 					start = chapter.time,
-					['end'] = next_chapter and next_chapter.time or infinity,
+					['end'] = next_chapter and next_chapter.time or INFINITY,
 				}, config.chapter_ranges.ads)
 			end
 		end
@@ -479,7 +606,11 @@ function normalize_chapters(chapters)
 	table.sort(chapters, function(a, b) return a.time < b.time end)
 	-- Ensure titles
 	for index, chapter in ipairs(chapters) do
-		chapter.title = chapter.title or ('Chapter ' .. index)
+		local chapter_number = chapter.title and string.match(chapter.title, '^Chapter (%d+)$')
+		if chapter_number then
+			chapter.title = t('Chapter %s', tonumber(chapter_number))
+		end
+		chapter.title = chapter.title ~= '(unnamed)' and chapter.title ~= '' and chapter.title or t('Chapter %s', index)
 		chapter.lowercase_title = chapter.title:lower()
 	end
 	return chapters
@@ -502,7 +633,10 @@ end
 --[[ RENDERING ]]
 
 function render()
+	if not display.initialized then return end
 	state.render_last_time = mp.get_time()
+
+	cursor.reset_handlers()
 
 	-- Actual rendering
 	local ass = assdraw.ass_new()
@@ -516,6 +650,8 @@ function render()
 			end
 		end
 	end
+
+	cursor.decide_keybinds()
 
 	-- submit
 	if osd.res_x == display.width and osd.res_y == display.height and osd.data == ass.text then

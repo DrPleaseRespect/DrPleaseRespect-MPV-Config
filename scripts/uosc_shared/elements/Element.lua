@@ -15,7 +15,7 @@ function Element:init(id, props)
 	-- Relative proximity from `0` - mouse outside `proximity_max` range, to `1` - mouse within `proximity_min` range.
 	self.proximity = 0
 	-- Raw proximity in pixels.
-	self.proximity_raw = infinity
+	self.proximity_raw = INFINITY
 	---@type number `0-1` factor to force min visibility. Used for toggling element's permanent visibility.
 	self.min_visibility = 0
 	---@type number `0-1` factor to force a visibility value. Used for flashing, fading out, and other animations
@@ -29,10 +29,10 @@ function Element:init(id, props)
 
 	-- Flash timer
 	self._flash_out_timer = mp.add_timeout(options.flash_duration / 1000, function()
-		local getTo = function() return self.proximity end
-		self:tween_property('forced_visibility', 1, getTo, function()
-			self.forced_visibility = nil
-		end)
+		local function getTo() return self.proximity end
+		local function onTweenEnd() self.forced_visibility = nil end
+		if self.enabled then self:tween_property('forced_visibility', 1, getTo, onTweenEnd)
+		else onTweenEnd() end
 	end)
 	self._flash_out_timer:kill()
 
@@ -43,6 +43,8 @@ function Element:destroy()
 	self.destroyed = true
 	Elements:remove(self)
 end
+
+function Element:reset_proximity() self.proximity, self.proximity_raw = 0, INFINITY end
 
 ---@param ax number
 ---@param ay number
@@ -56,13 +58,23 @@ end
 
 function Element:update_proximity()
 	if cursor.hidden then
-		self.proximity_raw = infinity
-		self.proximity = 0
+		self:reset_proximity()
 	else
 		local range = options.proximity_out - options.proximity_in
 		self.proximity_raw = get_point_to_rectangle_proximity(cursor, self)
 		self.proximity = 1 - (clamp(0, self.proximity_raw - options.proximity_in, range) / range)
 	end
+end
+
+function Element:is_persistent()
+	local persist = config[self.id .. '_persistency']
+	return persist and (
+		(persist.audio and state.is_audio)
+		or (persist.paused and state.pause and (not Elements.timeline.pressed or Elements.timeline.pressed.pause))
+		or (persist.video and state.is_video)
+		or (persist.image and state.is_image)
+		or (persist.idle and state.is_idle)
+	)
 end
 
 -- Decide elements visibility based on proximity and various other factors
@@ -72,14 +84,7 @@ function Element:get_visibility()
 	if not self.ignores_menu and Menu and Menu:is_open() then return 0 end
 
 	-- Persistency
-	local persist = config[self.id .. '_persistency']
-	if persist and (
-		(persist.audio and state.is_audio)
-			or (persist.paused and state.pause)
-			or (persist.video and state.is_video)
-			or (persist.image and state.is_image)
-			or (persist.idle and state.is_idle)
-		) then return 1 end
+	if self:is_persistent() then return 1 end
 
 	-- Forced visibility
 	if self.forced_visibility then return math.max(self.forced_visibility, self.min_visibility) end
@@ -129,14 +134,15 @@ end
 
 ---@param name string
 function Element:trigger(name, ...)
-	self:maybe('on_' .. name, ...)
+	local result = self:maybe('on_' .. name, ...)
 	request_render()
+	return result
 end
 
 -- Briefly flashes the element for `options.flash_duration` milliseconds.
 -- Useful to visualize changes of volume and timeline when changed via hotkeys.
 function Element:flash()
-	if options.flash_duration > 0 and (self.proximity < 1 or self._flash_out_timer:is_enabled()) then
+	if self.enabled and options.flash_duration > 0 and (self.proximity < 1 or self._flash_out_timer:is_enabled()) then
 		self:tween_stop()
 		self.forced_visibility = 1
 		request_render()
