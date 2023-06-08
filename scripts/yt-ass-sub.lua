@@ -38,21 +38,51 @@ function delete_folder(folder_path)
 end
 
 function download_srv3_subtitles(path)
-	args = {yt_dl, "--no-config", "--no-playlist", "--write-sub", "--sub-langs", "all,-live_chat",
-		"--no-download", "--sub-format=srv3","--retries", "infinite","--cookies-from-browser", cookies_from, "--output", path .. "sub", url}
-	subproc = utils.subprocess({args = args})
+	local args = {yt_dl, "--no-config", "--no-playlist", "--write-sub", "--sub-langs", "all,-live_chat",
+		"--no-download", "--sub-format=srv3","--retries", "infinite","--cookies-from-browser", cookies_from, "--output", path .. "%(language)s.%(ext)s", url}
+	local subproc = mp.command_native(
+				{
+					name = "subprocess",
+					playback_only=false,
+					args=args
+				})
 end
+
+function get_subtitles_names()
+	local sub_names = {}
+	local args = {yt_dl, "--no-config","--no-playlist","--simulate", "-J", url}
+	local subproc = mp.command_native(
+				{
+					name = "subprocess",
+					playback_only=false,
+					args=args,
+					capture_stdout=true
+				})
+	--print(subproc.stdout)
+	local videometadata = utils.parse_json(subproc.stdout)
+	for k,v in pairs(videometadata["subtitles"]) do
+		sub_names[k] = utils.to_string(v[1]["name"]):gsub('"', '')
+		--print(k .. " " .. sub_names[k])
+	end
+	return sub_names
+end
+
 
 function convert_srv3_to_ass(path)
 	local subs = utils.readdir(path, "files")
 	if subs ~= nil then
 		for _, item in ipairs(subs) do
-			item_path = utils.join_path(path, item)
-			subproc_args = {ytsubconverter_path, item_path, "--visual"}
-			subproc = utils.subprocess({args=subproc_args})
+			local item_path = utils.join_path(path, item)
+			local subproc_args = {ytsubconverter_path, item_path, "--visual"}
+			local subproc = mp.command_native(
+				{
+					name = "subprocess",
+					playback_only=false,
+					args=subproc_args
+				})
 			print(utils.format_json(subproc_args))
 			print(item_path)
-			returncode = os.remove(item_path)
+			local returncode = os.remove(item_path)
 			if returncode then
 				print("DELETED ".. item)
 			end
@@ -63,12 +93,14 @@ end
 function add_subtitles(path, mode_of_operation)
 	local subs = utils.readdir(path, "files")
 	if subs ~= nil then
+		local sub_names = get_subtitles_names()
 		for _, item in ipairs(subs) do
-			item_path = utils.join_path(path, item)
+			local item_path = utils.join_path(path, item)
 			if item:find(".ass") then
-				print("ADDING! ".. item)
-				slang = get_slang(item)
-				mp.commandv("sub-add" , item_path, mode_of_operation, slang, slang)
+				local slang = get_slang(item)
+				local sub_name = sub_names[slang]
+				print("ADDING! ".. item .. " " .. slang .. ":" .. sub_name)
+				mp.commandv("sub-add" , item_path, mode_of_operation, sub_name, slang)
 			end
 		end
 	end
