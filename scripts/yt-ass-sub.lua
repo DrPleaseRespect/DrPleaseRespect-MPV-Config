@@ -29,6 +29,11 @@ function check_if_url(url)
 	return url:find('[a-z]*://[^ >,;]*')
 end
 
+function check_if_playlist(url)
+	return url:find('/playlist')
+
+end
+
 function get_slang(item_name)
 	return item_name:match("%.(.-)%.ass")
 end
@@ -119,6 +124,11 @@ function subtitle_loader()
 		end
 	else
 		print("NOT A URL! EXITING!")
+		return
+	end
+
+	if check_if_playlist(url) then
+		print("PLAYLIST LINK! EXITING")
 		return
 	end
 
