@@ -85,8 +85,8 @@ function convert_srv3_to_ass(path)
 					playback_only=false,
 					args=subproc_args
 				})
-			print(utils.format_json(subproc_args))
-			print(item_path)
+			--print(utils.format_json(subproc_args))
+			--print(item_path)
 			local returncode = os.remove(item_path)
 			if returncode then
 				print("DELETED ".. item)
