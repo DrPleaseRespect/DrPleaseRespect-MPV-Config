@@ -26,7 +26,7 @@ local opts = {
                 "~~/shaders/SSimSuperRes.glsl"
             ]},
             {"KrigBilateral": [
-                "~~/shaders/KrigBilateral.glsl",
+                "~~/shaders/KrigBilateral.glsl"
             ]},
             {"Anime4K: Mode A (HQ)" : [
                 "~~/shaders/Anime4K_Clamp_Highlights.glsl",
