@@ -314,6 +314,7 @@ function create_profile_menu()
         type = 'shader_menu',
         title = 'Shaders',
         keep_open = true,
+        search_submenus = true,
         items = {}
     }
 
