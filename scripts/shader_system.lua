@@ -112,6 +112,9 @@ local opts = {
             ]},
             {"FSRCNNX Pre-Scaler" : [
                 "~~/shaders/FSRCNNX_x2_8-0-4-1.glsl"
+            ]},
+            {"AMD FidelityFX FSR": [
+                "~~/shaders/FSR.glsl"
             ]}
         ]
     ]]
@@ -326,12 +329,12 @@ function create_profile_menu()
             local found_folder = false
             local foldername = profile_states[name]["folder"]
             for _, iter_foldername in ipairs(menu.items) do
-                if iter_foldername.title == foldername then
+                if iter_foldername.title == foldername then -- If folder exists
                     iter_foldername.items[#iter_foldername.items+1] = item
                     found_folder = true
                 end
             end
-            if not found_folder then
+            if not found_folder then -- If folder does not exist
                 menu.items[#menu.items+1] = {title = foldername, items = {item}, keep_open = true}
             end
         end
