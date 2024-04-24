@@ -1,9 +1,10 @@
--- Copyright (c) 2023, DrPleaseRespect
+-- Copyright (c) 2023-2024, DrPleaseRespect
 -- License: GPL3 License
 -- Creator: Julian Nayr
--- Version 1.0
+-- Version 1.1
 
 -- This script requires uosc https://github.com/tomasklaen/uosc
+-- Requires at least uosc version 5.2.0
 
 mp = require 'mp'
 utils = require 'mp.utils'
