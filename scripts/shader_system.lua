@@ -312,7 +312,7 @@ function command(str)
 function create_profile_menu()
     local menu = {
         type = 'shader_menu',
-        title = 'Shader Select',
+        title = 'Shaders',
         keep_open = true,
         items = {}
     }
