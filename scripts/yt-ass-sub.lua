@@ -1,7 +1,7 @@
 -- Copyright (c) 2022-2024, DrPleaseRespect
 -- License: MIT License
 -- Creator: Julian Nayr
--- Version 2.0
+-- Version 2.0.1
 
 -- WINDOWS ONLY! --
 
@@ -9,21 +9,13 @@
 local mp = require 'mp'
 local utils = require 'mp.utils'
 local msg = require 'mp.msg'
-local pid = utils.getpid()
 
-
-local separator = "\\"
-local folder_path = os.getenv("TEMP")..separator.."mpv_subsconversion" .. separator .. pid
-local executable_prefix = ".exe"
-
-local path = folder_path .. separator
-
+local executable_suffix = ".exe"
 
 local cookies_from = "firefox"
-local yt_dlp_path = mp.command_native({"expand-path", "~~/executables/yt-dlp" .. executable_prefix})
-local ytsubconverter_path = mp.command_native({"expand-path", "~~/executables/YTSubConverter" .. executable_prefix})
+local yt_dlp_path = mp.command_native({"expand-path", "~~/executables/yt-dlp" .. executable_suffix})
+local ytsubconverter_path = mp.command_native({"expand-path", "~~/executables/YTSubConverter" .. executable_suffix})
 
-local last_url = nil
 url = nil
 
 function check_if_url(url)
