@@ -1,7 +1,7 @@
 -- Copyright (c) 2022-2024, DrPleaseRespect
 -- License: MIT License
 -- Creator: Julian Nayr
--- Version 2.0.1
+-- Version 2.0.2
 
 -- WINDOWS ONLY! --
 
@@ -28,6 +28,8 @@ end
 
 function convert_subs(url)
 	local args = {ytsubconverter_path, url}
+	---@type Subprocess | nil
+	---@diagnostic disable-next-line: assign-type-mismatch
 	local subproc = mp.command_native(
 				{
 					name = "subprocess",
@@ -35,16 +37,23 @@ function convert_subs(url)
 					args=args,
 					capture_stdout=true
 				})
-	return "memory://" .. subproc.stdout
+	if subproc == nil then
+		print("Error converting subtitles!")
+		return "memory://WEBVTT"
+	else
+		return "memory://" .. subproc.stdout
+	end
 end
 
 function obtain_url()
-	url = mp.get_property("stream-open-filename", nil)
+	url = mp.get_property("stream-open-filename")
 end
 
 function download_srv3_subtitles()
 	local args = {yt_dlp_path, url , "--no-config", "--no-playlist", "--write-sub", "--sub-langs", "all,-live_chat", "-J",
 		"--no-download", "--sub-format=srv3","--retries", "infinite","--cookies-from-browser", cookies_from,}
+	---@type Subprocess | nil
+	---@diagnostic disable-next-line: assign-type-mismatch
 	local subproc = mp.command_native(
 				{
 					name = "subprocess",
@@ -54,6 +63,10 @@ function download_srv3_subtitles()
 					capture_stderr=true
 				})
 	--print(subproc.stdout)
+	if subproc == nil then
+		print("Error obtaining subtitles!")
+		return
+	end
 	local json = utils.parse_json(subproc.stdout)
 	if json.requested_subtitles ~= nil then
         local subs = {}
@@ -61,9 +74,9 @@ function download_srv3_subtitles()
             subs[#subs + 1] = {lang = lang or "-", info = info}
         end
         table.sort(subs, function(a, b) return a.lang < b.lang end)
-		for _, sub_info in ipairs(subs) do
-			local sub_lang = sub_info.lang
-			local sub_info = sub_info.info
+		for _, subItem in ipairs(subs) do
+			local sub_lang = subItem.lang
+			local sub_info = subItem.info
 			subfile_url = json.requested_subtitles[sub_lang].url
 			local converted_sub = convert_subs(subfile_url)
 			print("adding ".. sub_lang .. " subtitles")
