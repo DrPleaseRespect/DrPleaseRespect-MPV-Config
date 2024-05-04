@@ -1,0 +1,17 @@
+{
+  /* mpv builds with 5.1, 5.2, or luajit */
+  "Lua.runtime.version": "Lua 5.1",
+
+  /* Declarations can also be placed in workspace subdirectory */
+  "Lua.workspace.library": [
+    ".vscode/types_def/mpv-lua-types/@types/",
+    ".vscode\\types_def\\mpv-types-lua\\types"
+  ]
+
+  ,
+
+  /* Recommended */
+  "Lua.completion.enable": true,
+  "Lua.signatureHelp.enable": true,
+  "Lua.hover.enable": true,
+}

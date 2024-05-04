@@ -1,0 +1,3 @@
+[submodule ".vscode/types_def/mpv-types-lua"]
+	path = .vscode/types_def/mpv-types-lua
+	url = https://github.com/disco0/mpv-types-lua.git
