@@ -1,20 +1,28 @@
 -- Copyright (c) 2022-2024, DrPleaseRespect
 -- License: MIT License
 -- Creator: Julian Nayr
--- Version 2.0.2
+-- Version 2.0.3
 
--- WINDOWS ONLY! --
+-- UNTESTED ON LINUX --
 
 
 local mp = require 'mp'
 local utils = require 'mp.utils'
 local msg = require 'mp.msg'
 
-local executable_suffix = ".exe"
+
+-- OS Detection
+local vo_profile = {}
+if mp.get_property_native('options/vo-mmcss-profile', vo_profile) ~= vo_profile then
+  executable_suffix = ".exe"
+else
+  executable_suffix = ""
+end
+
 
 local cookies_from = "firefox"
 local yt_dlp_path = mp.command_native({"expand-path", "~~/executables/yt-dlp" .. executable_suffix})
-local ytsubconverter_path = mp.command_native({"expand-path", "~~/executables/YTSubConverter" .. executable_suffix})
+local ytsubconverter_path = mp.command_native({"expand-path", "~~/executables/YTSubConverter.MPVHelper" .. executable_suffix})
 
 url = nil
 
