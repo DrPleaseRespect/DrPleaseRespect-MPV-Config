@@ -1,7 +1,7 @@
 -- Copyright (c) 2022-2024, DrPleaseRespect
 -- License: MIT License
 -- Creator: Julian Nayr
--- Version 2.0.3
+-- Version 2.0.4
 
 -- UNTESTED ON LINUX --
 
@@ -110,7 +110,7 @@ function remove_webvtt_tracks()
 	end
 	local tracks = mp.get_property_native("track-list")
 	for index, item in ipairs(tracks) do
-		if (item["codec"] == "webvtt" and item["type"] == "sub") then
+		if (item["codec"] == "null" and item["type"] == "sub") then
 			print("REMOVED: ".. "ID: " .. item['id'] .. " LANG:" .. item["lang"])
 			mp.commandv("sub-remove", item['id'])
 		end
