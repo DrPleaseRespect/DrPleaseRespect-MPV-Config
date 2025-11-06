@@ -118,5 +118,5 @@ function remove_webvtt_tracks()
 	download_srv3_subtitles()
 end
 
-mp.add_hook("on_load", 50, obtain_url) -- obtain URL before ytdl_hook takes over
+mp.add_hook("on_load", 9, obtain_url) -- obtain URL before ytdl_hook takes over
 mp.add_hook("on_preloaded", 50, remove_webvtt_tracks) -- start payload
